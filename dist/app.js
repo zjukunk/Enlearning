@@ -13,11 +13,18 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+
 const express_1 = __importDefault(require("express"));
 const body_parser_1 = __importDefault(require("body-parser"));
+const cors_1 = __importDefault(require("cors")); // 导入cors模块
 const User_1 = __importDefault(require("./User"));
+
 const app = (0, express_1.default)();
 const port = 3000;
+
+// 允许所有跨域请求
+app.use((0, cors_1.default)()); // 应用cors中间件
+
 app.use(body_parser_1.default.json());
 app.post('/register', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { username, password } = req.body;

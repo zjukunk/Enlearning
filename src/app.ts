@@ -3,10 +3,11 @@
 import express, { Request, Response } from 'express';
 import bodyParser from 'body-parser';
 import User from './User';
+import cors from 'cors';
 
 const app = express();
 const port = 3000;
-
+app.use(cors());
 app.use(bodyParser.json());
 
 app.post('/register', async (req: any, res: any) => {
