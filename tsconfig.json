@@ -11,5 +11,8 @@
       "forceConsistentCasingInFileNames": true /* 强制文件名大小写一致 */
     },
     "include": ["src/**/*"],                    /* 指定要编译的文件，通常是源代码目录 */
-    "exclude": ["node_modules", "dist"]        /* 指定排除的文件或目录 */
+    "exclude": ["node_modules", "dist"],   /* 指定排除的文件或目录 */
+    "scripts": {
+    "build": "tsc"
+  }
   }

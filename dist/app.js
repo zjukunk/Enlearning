@@ -1,5 +1,4 @@
 "use strict";
-//main
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -13,52 +12,91 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-
 const express_1 = __importDefault(require("express"));
 const body_parser_1 = __importDefault(require("body-parser"));
-const cors_1 = __importDefault(require("cors")); // 导入cors模块
 const User_1 = __importDefault(require("./User"));
-
+const cors_1 = __importDefault(require("cors"));
+const db_1 = __importDefault(require("./db"));
 const app = (0, express_1.default)();
 const port = 3000;
-
-// 允许所有跨域请求
-app.use((0, cors_1.default)()); // 应用cors中间件
-
+app.use((0, cors_1.default)({
+    origin: '*',
+    optionsSuccessStatus: 200
+}));
 app.use(body_parser_1.default.json());
 app.post('/register', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { username, password } = req.body;
-    if (!username || !password) {
-        return res.status(400).send('Username and password are required');
+    const { username, password, invitecode } = req.body;
+    if (!username || !password || !invitecode) {
+        return res.status(400).send('请完整输入账号、密码与邀请码');
+    }
+    if (invitecode !== 'qsccy') {
+        return res.status(400).send('邀请码错误，请耐心等待公测或联系我们获得邀请码');
     }
     try {
         const userId = yield User_1.default.register({ username, password });
-        res.status(201).send(`User ${username} registered with ID ${userId}`);
+        res.status(201).send(`${username}注册成功！`);
     }
     catch (error) {
         res.status(500).send(error.message);
     }
 }));
-// 设置登录路由
 app.post('/login', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { username, password } = req.body;
     if (!username || !password) {
-        return res.status(400).send('Username and password are required');
+        return res.status(400).send('请完整输入账号与密码');
     }
     try {
         const user = yield User_1.default.login(username, password);
         if (user) {
-            res.send(`User ${username} logged in successfully`);
+            res.send(`用户 ${username} 登陆成功！`);
         }
         else {
-            res.status(404).send('User not found or incorrect password');
+            res.status(404).send('账号不存在或密码错误');
         }
     }
     catch (error) {
         res.status(500).send(error.message);
     }
 }));
-// 启动服务器
+app.post('/word', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { type } = req.body;
+    if (typeof type !== 'number' || (type !== 1 && type !== 2)) {
+        return res.status(400).send('Invalid type parameter');
+    }
+    try {
+        const [rows] = yield db_1.default.query('SELECT * FROM wordsheet');
+        if (rows.length === 0) {
+            throw new Error('No words found in the database');
+        }
+        const allWords = rows.map(row => ({
+            id: row.id,
+            word: row.word,
+            part_of_speech: row.part_of_speech,
+            chinese_meaning: row.chinese_meaning
+        }));
+        const correctWord = allWords[Math.floor(Math.random() * allWords.length)];
+        const incorrectWords = allWords.filter(word => word.id !== correctWord.id);
+        let options = [...incorrectWords.slice(0, 3), correctWord];
+        if (type === 1) {
+            options = options.map(word => word.chinese_meaning);
+        }
+        else if (type === 2) {
+            options = options.map(word => word.word);
+        }
+        options.sort(() => Math.random() - 0.5); // Shuffle the options
+        const answer = options.indexOf(type === 1 ? correctWord.chinese_meaning : correctWord.word);
+        res.send({
+            question: correctWord.word,
+            part_of_speech: correctWord.part_of_speech,
+            meaning: type === 1 ? correctWord.chinese_meaning : '',
+            options,
+            answer
+        });
+    }
+    catch (error) {
+        res.status(500).send('Error retrieving word data');
+    }
+}));
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
 });
