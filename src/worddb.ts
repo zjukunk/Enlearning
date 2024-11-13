@@ -1,5 +1,6 @@
-import { createPool } from 'mysql2';
+//这段代码已经弃用
 
+/*
 const pool = createPool({
   host: 'localhost',
   user: 'root',
@@ -41,3 +42,4 @@ export const getWord = async (type: number): Promise<any> => {
     throw error;
   }
 };
+*/

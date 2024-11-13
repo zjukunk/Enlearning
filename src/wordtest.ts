@@ -1,3 +1,6 @@
+//这段代码已经弃用
+
+/*
 import express from 'express';
 import { getWord } from './worddb';
 
@@ -17,3 +20,4 @@ router.post('/word', async (req, res) => {
 });
 
 export default router;
+*/

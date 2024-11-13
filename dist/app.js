@@ -60,7 +60,7 @@ app.post('/login', (req, res) => __awaiter(void 0, void 0, void 0, function* () 
 }));
 app.post('/word', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { type } = req.body;
-    if (typeof type !== 'number' || (type !== 1 && type !== 2)) {
+    if (typeof type !== 'number' || (type !== 1 && type !== 2 && type !== 3)) {
         return res.status(400).send('Invalid type parameter');
     }
     try {
@@ -75,23 +75,38 @@ app.post('/word', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             chinese_meaning: row.chinese_meaning
         }));
         const correctWord = allWords[Math.floor(Math.random() * allWords.length)];
-        const incorrectWords = allWords.filter(word => word.id !== correctWord.id);
-        let options = [...incorrectWords.slice(0, 3), correctWord];
-        if (type === 1) {
-            options = options.map(word => word.chinese_meaning);
+        if (type === 1 || type === 2) {
+            const incorrectWords = allWords.filter(word => word.id !== correctWord.id);
+            let options = [...incorrectWords.slice(0, 3), correctWord];
+            if (type === 1) {
+                options = options.map(word => word.chinese_meaning);
+            }
+            else if (type === 2) {
+                options = options.map(word => word.word);
+            }
+            options.sort(() => Math.random() - 0.5); // Shuffle the options
+            const answer = options.indexOf(type === 1 ? correctWord.chinese_meaning : correctWord.word);
+            // 修改部分：当type为2时，question字段返回correctWord.chinese_meaning
+            const question = type === 2 ? correctWord.chinese_meaning : correctWord.word;
+            res.send({
+                question,
+                part_of_speech: correctWord.part_of_speech,
+                meaning: type === 1 ? correctWord.chinese_meaning : '', // 这里保持不变
+                options,
+                answer
+            });
         }
-        else if (type === 2) {
-            options = options.map(word => word.word);
+        else if (type === 3) {
+            const question = createQuestionWithMaskedLetters(correctWord.word);
+            const answer = correctWord.word;
+            res.send({
+                question,
+                part_of_speech: correctWord.part_of_speech,
+                meaning: correctWord.chinese_meaning,
+                answer
+            });
+            return; // 直接返回，不再执行后面的代码
         }
-        options.sort(() => Math.random() - 0.5); // Shuffle the options
-        const answer = options.indexOf(type === 1 ? correctWord.chinese_meaning : correctWord.word);
-        res.send({
-            question: correctWord.word,
-            part_of_speech: correctWord.part_of_speech,
-            meaning: type === 1 ? correctWord.chinese_meaning : '',
-            options,
-            answer
-        });
     }
     catch (error) {
         res.status(500).send('Error retrieving word data');
@@ -100,3 +115,19 @@ app.post('/word', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
 });
+function createQuestionWithMaskedLetters(word) {
+    const maskedWordArray = word.split('').map((char, index) => {
+        // 保留首字母和一个随机字母，其余用?替换
+        if (index !== 0 || (index !== 0 && index !== Math.floor(Math.random() * (word.length - 1)))) {
+            return '?';
+        }
+        return char;
+    });
+    // 确保至少有一个非首字母的随机字母被保留
+    const hasOtherLetter = maskedWordArray.some((char, index) => index !== 0 && char !== '?');
+    if (!hasOtherLetter) {
+        const otherLetterIndex = Math.floor(Math.random() * (word.length - 1)) + 1;
+        maskedWordArray[otherLetterIndex] = word[otherLetterIndex];
+    }
+    return maskedWordArray.join('');
+}
