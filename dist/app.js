@@ -18,7 +18,7 @@ const User_1 = __importDefault(require("./User"));
 const cors_1 = __importDefault(require("cors"));
 const db_1 = __importDefault(require("./db"));
 const app = (0, express_1.default)();
-const port = 3000;
+const port = 8008;
 app.use((0, cors_1.default)({
     origin: '*',
     optionsSuccessStatus: 200
@@ -110,6 +110,38 @@ app.post('/word', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
     catch (error) {
         res.status(500).send('Error retrieving word data');
+    }
+}));
+app.get('/mathtest', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const type = parseInt(req.query.type, 10);
+    const id = parseInt(req.query.id, 10);
+    if (isNaN(type) || (type !== 1 && type !== 2)) {
+        return res.status(400).send('Invalid type parameter');
+    }
+    if (isNaN(id) || ((type === 1 && (id < 1 || id > 99)) || (type === 2 && (id < 1 || id > 3)))) {
+        return res.status(400).send('Invalid id parameter');
+    }
+    try {
+        let results;
+        let questionIds = [];
+        if (type === 1) {
+            results = yield db_1.default.query('SELECT id FROM mathtest WHERE question_set = ?', [id]);
+        }
+        else if (type === 2) {
+            results = yield db_1.default.query('SELECT id FROM mathtest WHERE difficulty = ? LIMIT 5', [id]);
+        }
+        if (results[0].length === 0) {
+            throw new Error('No questions found in the database');
+        }
+        questionIds = results[0].map(row => row.id).filter((id) => typeof id === 'number' && id !== null);
+        res.send({
+            count: questionIds.length,
+            questionIds
+        });
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).send('Error retrieving math test data');
     }
 }));
 app.listen(port, () => {

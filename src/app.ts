@@ -5,7 +5,7 @@ import cors from 'cors';
 import pool from "./db"
 
 const app = express();
-const port = 3000;
+const port = 8008;
 
 app.use(cors({
   origin: '*',
@@ -94,6 +94,45 @@ app.post('/word', async (req, res) => {
     }
   } catch (error) {
     res.status(500).send('Error retrieving word data');
+  }
+});
+
+
+
+app.get('/mathtest', async (req: Request, res: Response) => {
+  const type = parseInt(req.query.type as string, 10);
+  const id = parseInt(req.query.id as string, 10);
+
+  if (isNaN(type) || (type !== 1 && type !== 2)) {
+    return res.status(400).send('Invalid type parameter');
+  }
+  if (isNaN(id) || ((type === 1 && (id < 1 || id > 99)) || (type === 2 && (id < 1 || id > 3)))) {
+    return res.status(400).send('Invalid id parameter');
+  }
+
+  try {
+    let results;
+    let questionIds: number[] = [];
+
+    if (type === 1) {
+      results = await pool.query('SELECT id FROM mathtest WHERE question_set = ?', [id]);
+    } else if (type === 2) {
+      results = await pool.query('SELECT id FROM mathtest WHERE difficulty = ? LIMIT 5', [id]);
+    }
+
+    if (results[0].length === 0) {
+      throw new Error('No questions found in the database');
+    }
+
+    questionIds = results[0].map(row => row.id).filter((id): id is number => typeof id === 'number' && id !== null);
+
+    res.send({
+      count: questionIds.length,
+      questionIds
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Error retrieving math test data');
   }
 });
 
