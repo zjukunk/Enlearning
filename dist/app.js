@@ -17,6 +17,7 @@ const body_parser_1 = __importDefault(require("body-parser"));
 const User_1 = __importDefault(require("./User"));
 const cors_1 = __importDefault(require("cors"));
 const db_1 = __importDefault(require("./db"));
+const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const app = (0, express_1.default)();
 const port = 8008;
 app.use((0, cors_1.default)({
@@ -142,6 +143,59 @@ app.get('/mathtest', (req, res) => __awaiter(void 0, void 0, void 0, function* (
     catch (error) {
         console.error(error);
         res.status(500).send('Error retrieving math test data');
+    }
+}));
+app.post('/mathget', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { id } = req.body;
+    if (typeof id !== 'number' || id < 1) {
+        return res.status(400).send('Invalid id parameter');
+    }
+    try {
+        const [rows] = yield db_1.default.query('SELECT * FROM mathtest WHERE id = ?', [id]);
+        if (rows.length === 0) {
+            throw new Error('No math test found with the given id');
+        }
+        const mathTest = rows[0];
+        res.send({
+            id: mathTest.id,
+            question: mathTest.question,
+            answer: mathTest.answer,
+            question_set: mathTest.question_set,
+            difficulty: mathTest.difficulty,
+            time_limit: mathTest.time_limit
+        });
+    }
+    catch (error) {
+        res.status(500).send('Error retrieving math test data');
+    }
+}));
+app.use((0, cookie_parser_1.default)());
+app.post('/inputhistory', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { id, score, username } = req.body;
+    if (!username || id === undefined || score === undefined) {
+        return res.status(400).send('请提供有效的用户名、id和分数');
+    }
+    const time = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    try {
+        const [result] = yield db_1.default.query('INSERT INTO history (username, question_id, answertime, score) VALUES (?, ?, ?, ?)', [username, id, time, score]);
+        res.send(`历史记录已添加，ID为 ${result.insertId}`);
+    }
+    catch (error) {
+        res.status(500).send(error.message);
+    }
+}));
+app.get('/gethistory', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { username } = req.query; // 从查询参数中获取 username
+    if (!username) {
+        return res.status(400).send('请提供用户名');
+    }
+    try {
+        // 查询 history 表，获取前 50 条记录
+        const [rows] = yield db_1.default.query('SELECT * FROM history WHERE username = ? LIMIT 50', [username]);
+        res.json(rows); // 将查询结果以 JSON 格式返回
+    }
+    catch (error) {
+        res.status(500).send(error.message);
     }
 }));
 app.listen(port, () => {

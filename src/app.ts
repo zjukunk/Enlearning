@@ -3,6 +3,7 @@ import bodyParser from 'body-parser';
 import User from './User';
 import cors from 'cors';
 import pool from "./db"
+import cookieParser from 'cookie-parser';
 
 const app = express();
 const port = 8008;
@@ -133,6 +134,61 @@ app.get('/mathtest', async (req: Request, res: Response) => {
   } catch (error) {
     console.error(error);
     res.status(500).send('Error retrieving math test data');
+  }
+});
+
+app.post('/mathget', async (req, res) => {
+  const { id } = req.body;
+  if (typeof id !== 'number' || id < 1) {
+    return res.status(400).send('Invalid id parameter');
+  }
+  try {
+    const [rows] = await pool.query('SELECT * FROM mathtest WHERE id = ?', [id]);
+    if (rows.length === 0) {
+      throw new Error('No math test found with the given id');
+    }
+    const mathTest = rows[0];
+    res.send({
+      id: mathTest.id,
+      question: mathTest.question,
+      answer: mathTest.answer,
+      question_set: mathTest.question_set,
+      difficulty: mathTest.difficulty,
+      time_limit: mathTest.time_limit
+    });
+  } catch (error) {
+    res.status(500).send('Error retrieving math test data');
+  }
+});
+
+app.use(cookieParser());
+app.post('/inputhistory', async (req, res) => {
+  const { id, score, username } = req.body;
+  if (!username || id === undefined || score === undefined) {
+    return res.status(400).send('请提供有效的用户名、id和分数');
+  }
+  const time = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  try {
+    const [result] = await pool.query('INSERT INTO history (username, question_id, answertime, score) VALUES (?, ?, ?, ?)', [username, id, time, score]);
+    res.send(`历史记录已添加，ID为 ${result.insertId}`);
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
+app.get('/gethistory', async (req, res) => {
+  const { username } = req.query; // 从查询参数中获取 username
+
+  if (!username) {
+    return res.status(400).send('请提供用户名');
+  }
+
+  try {
+    // 查询 history 表，获取前 50 条记录
+    const [rows] = await pool.query('SELECT * FROM history WHERE username = ? LIMIT 50', [username]);
+    res.json(rows); // 将查询结果以 JSON 格式返回
+  } catch (error) {
+    res.status(500).send(error.message);
   }
 });
 
